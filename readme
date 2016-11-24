@@ -1,0 +1,17 @@
+1)run
+
+INTERVAL-Sampling interval
+minimumsize-Max size at which logs will be processed
+LOGDIR-Logs directory
+OUTDIR-Output directory
+
+
+2)QPS
+
+OUTDIR-Output directory
+
+
+
+3)waitTimeLock
+
+OUTDIR-Output directory

@@ -1,0 +1,34 @@
+#!/bin/sh
+INTERVAL=1
+minimumsize=512000 #500MB
+LOGDIR="/root/Logs/";
+OUTDIR="/root/Output/";
+[ ! -d $LOGDIR ] && mkdir $LOGDIR;
+[ ! -d $OUTDIR ] && mkdir $OUTDIR;
+
+mysql -uroot -piltwat -e 'SHOW GLOBAL VARIABLES'>>${OUTDIR}/mysql-variables
+while true; do
+        
+        #size check        
+        actualsize=$(du -k ${LOGDIR} | cut -f 1);
+
+        if [ $actualsize -ge $minimumsize ]; then
+         echo "Size exceeded !! Processing now.."
+         mv ${LOGDIR}/* ${OUTDIR}/ 
+         ./QPS
+         ./waitTimeLOCK
+       fi
+
+	sleep $INTERVAL 
+	ts="$(date +"TS $INTERVAL %s.%N %F %T")"
+
+        echo -e "\n$ts" >>${LOGDIR}/STATUS	
+        mysql -uroot -piltwat  -e 'SHOW GLOBAL STATUS where Variable_name="Queries"' >>${LOGDIR}/STATUS &
+
+	echo -e "\n$ts" >>${LOGDIR}/INNODB_TRX_JOIN_LOCK
+	mysql -uroot -piltwat  -e 'SELECT TIMESTAMPDIFF(SECOND,trx_wait_started,NOW()) AS WaitTime, A.trx_id,A.trx_started,A.trx_mysql_thread_id,B.lock_id,B.lock_trx_id,B.lock_table,A.trx_query  FROM information_schema.INNODB_TRX A join information_schema.INNODB_LOCKS B on A.trx_id=B.lock_trx_id;' >>${LOGDIR}/INNODB_TRX_JOIN_LOCK &
+
+        echo $ts
+done
+
+

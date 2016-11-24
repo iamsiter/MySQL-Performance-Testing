@@ -1,0 +1,33 @@
+#!/bin/sh
+# This script converts SHOW GLOBAL STATUS into a tabulated format, one line
+# per sample in the input, with the metrics divided by the time elapsed
+# between samples.
+
+OUTDIR="/root/Output/";
+cd $OUTDIR;
+
+
+date="$(date +%d\-%m\-%Y)";
+OPfile="$(date +%d\-%m\-%Y\-%T)";
+
+if [ ! -f "STATUS" ]; then echo "The File Does Not Exist"; fi
+
+awk -v date=$date '
+BEGIN {
+printf "#ts\t\t date\t time QPS\n#";
+fmt = " %.2f\n";
+}
+/^TS/ { 
+# The timestamp lines begin with TS.
+ts= substr($3, 1, index($3, ".") - 1);
+diff=ts-prev_ts;
+prev_ts = ts;
+printf "%s %s %s ", ts, $4, $5;
+}
+/Queries/ {
+printf fmt, ($2-Queries)/diff;
+Queries=$2
+}
+' STATUS>>${OPfile}-QPS
+
+rm STATUS

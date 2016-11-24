@@ -1,0 +1,54 @@
+#!/bin/sh
+# This script converts waitTime result into a tabulated format, one line
+# per sample in the input, with the metrics divided by the time elapsed
+# between samples.
+
+OUTDIR="/root/Output/";
+cd $OUTDIR;
+
+
+date="$(date  +%d\-%m\-%Y)"
+OPfile="$(date +%d\-%m\-%Y\-%T)";
+
+if [ ! -f "INNODB_TRX_JOIN_LOCK" ]; then echo "The File Does Not Exist"; fi
+
+awk -v date=$date '
+function isnum(x){return(x==x+0)} ;
+
+BEGIN {
+ printf "#  WaitTime | trx_id |trx_started | trx_mysql_thread_id |lock_id | lock_table |trx_query|\n\n";
+}
+
+{
+wt=$1;txid=$2;
+if(isnum(wt)==0)
+      next;
+
+if (txid in b)
+     {
+      row=b[txid];   
+      split (row, a, " ");
+      prevWT=a[1];
+      if(wt<prevWT && prevWT)     #another lock acquiring query in same transaction has started
+         {
+           printf "* "b[txid]"\n";
+           b[txid]=$0;
+         }
+         else
+           b[txid]=$0;
+     }
+else
+    {
+       b[txid]=$0;
+    }
+
+}
+
+END{
+for(i in b)
+    printf "* "b[i]"\n"
+
+}
+' INNODB_TRX_JOIN_LOCK>>${OPfile}-waitTimeLOCK
+
+rm INNODB_TRX_JOIN_LOCK
